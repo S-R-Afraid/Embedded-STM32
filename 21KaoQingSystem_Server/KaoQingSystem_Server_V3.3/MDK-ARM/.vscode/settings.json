@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "esp32.h": "c",
+        "rc522.h": "c",
+        "stdlib.h": "c",
+        "font.h": "c",
+        "stm32f1xx_hal.h": "c",
+        "wifi.h": "c",
+        "stdio.h": "c"
+    }
+}

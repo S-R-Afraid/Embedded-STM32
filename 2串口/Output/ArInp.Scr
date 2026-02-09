@@ -1,0 +1,21 @@
+--create ..\..\Output\atk_f103.lib
+..\..\output\startup_stm32f103xe.o
+..\..\output\stm32f1xx_it.o
+..\..\output\main.o
+..\..\output\system_stm32f1xx.o
+..\..\output\sys.o
+..\..\output\delay.o
+..\..\output\usart.o
+..\..\output\stm32f1xx_hal.o
+..\..\output\stm32f1xx_hal_cortex.o
+..\..\output\stm32f1xx_hal_dma.o
+..\..\output\stm32f1xx_hal_gpio.o
+..\..\output\stm32f1xx_hal_gpio_ex.o
+..\..\output\stm32f1xx_hal_rcc.o
+..\..\output\stm32f1xx_hal_rcc_ex.o
+..\..\output\stm32f1xx_hal_uart.o
+..\..\output\stm32f1xx_hal_usart.o
+..\..\output\beep.o
+..\..\output\exti.o
+..\..\output\key.o
+..\..\output\led.o
