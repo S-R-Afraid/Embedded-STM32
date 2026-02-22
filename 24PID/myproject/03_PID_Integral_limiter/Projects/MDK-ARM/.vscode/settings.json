@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+        "encoder.h": "c",
+        "oled.h": "c",
+        "adc.h": "c",
+        "gtim.h": "c",
+        "sys.h": "c",
+        "key.h": "c",
+        "led.h": "c",
+        "float.h": "c"
+    }
+}

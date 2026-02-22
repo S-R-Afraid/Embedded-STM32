@@ -144,39 +144,103 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef *htim)
 void TIM6_IRQHandler(void)
 {
     __HAL_TIM_CLEAR_IT(&g_tim6_handle, TIM_IT_UPDATE);//清中断位
+    /*摇杆自动校准*/
+    /* ===== 中心校准状态 ===== */
+    static float adc_center_x = 2048.0f;
+    static float adc_center_y = 2048.0f;
+
+    static uint8_t adc_center_ready = 0;
+
+    static uint16_t center_sample_count = 0;
+    static float center_acc_x = 0;
+    static float center_acc_y = 0;
+
+    /* ===== 低通滤波 ===== */
+    static float filt_x = 2048.0f;
+    static float filt_y = 2048.0f;
     /* ADC相关 */
-    uint16_t i,j;
-    uint16_t adcx;
+    uint16_t i, j;
     uint32_t sum;
-    float temp;
-    int cx,cy;
-    if(model){
+    uint16_t raw_x, raw_y;
+
+    int cx, cy;
+
+    if(model)
+    {
+        /* ===== DMA 数据平均 ===== */
         if (g_adc_dma_sta == 1)
         {
-            /* 循环显示通道0~通道5的结果 */
-            for(j = 0; j < 2; j++)  /* 遍历2个通道 */
+            for(j = 0; j < 2; j++)
             {
-                sum = 0; /* 清零 */
-                for (i = 0; i < ADC_DMA_BUF_SIZE / 2; i++)  /* 每个通道采集了10次数据,进行10次累加 */
+                sum = 0;
+                for (i = 0; i < ADC_DMA_BUF_SIZE / 2; i++)
                 {
-                    sum += g_adc_dma_buf[(2 * i) + j];      /* 相同通道的转换数据累加 */
+                    sum += g_adc_dma_buf[i * 2 + j];
                 }
-                adcx = sum / (ADC_DMA_BUF_SIZE / 2);        /* 取平均值 */
-                
-                /* 保存结果 */
-                PS2_xy_value[j] = adcx;
-                
+                PS2_xy_value[j] = sum / (ADC_DMA_BUF_SIZE / 2);
             }
-            g_adc_dma_sta = 0;                      /* 清除DMA采集完成状态标志 */
-            adc_dma_enable(ADC_DMA_BUF_SIZE);       /* 启动下一次ADC DMA采集 */
+
+            g_adc_dma_sta = 0;
+            adc_dma_enable(ADC_DMA_BUF_SIZE);
         }
-        PS2_x_f = PS2_xy_value[0]/4096.0 - 0.5;
-        PS2_y_f = PS2_xy_value[1]/4096.0 - 0.5;
-        
-        cx = 40*PS2_x_f,cy = 40*PS2_y_f;
+
+        raw_x = PS2_xy_value[0];
+        raw_y = PS2_xy_value[1];
+
+        /* ===== 低通滤波 ===== */
+        filt_x = filt_x * 0.7f + raw_x * 0.3f;
+        filt_y = filt_y * 0.7f + raw_y * 0.3f;
+
+        raw_x = (uint16_t)filt_x;
+        raw_y = (uint16_t)filt_y;
+
+        /* ===== 上电中心校准 ===== */
+        if(!adc_center_ready)
+        {
+            const uint16_t REQUIRED_SAMPLES = 64;
+
+            center_acc_x += raw_x;
+            center_acc_y += raw_y;
+            center_sample_count++;
+
+            if(center_sample_count >= REQUIRED_SAMPLES)
+            {
+                adc_center_x = center_acc_x / REQUIRED_SAMPLES;
+                adc_center_y = center_acc_y / REQUIRED_SAMPLES;
+
+                adc_center_ready = 1;
+
+                center_acc_x = 0;
+                center_acc_y = 0;
+                center_sample_count = 0;
+            }
+
+            PS2_x_f = 0;
+            PS2_y_f = 0;
+        }
+        else
+        {
+            /* ===== 仅基于中心归一化 ===== */
+            /* ADC 理论范围 0~4095 → 相对中心映射到约 [-0.5, 0.5] */
+            float x = (raw_x - adc_center_x) / 4095.0f;
+            float y = (raw_y - adc_center_y) / 4095.0f;
+
+            /* ===== 死区 ===== */
+            if(fabsf(x) < 0.02f) x = 0;
+            if(fabsf(y) < 0.02f) y = 0;
+
+            PS2_x_f = x;
+            PS2_y_f = y;
+        }
+
+        /* ===== 输出坐标 ===== */
+        cx = (int)(40.0f * PS2_x_f);
+        cy = (int)(40.0f * PS2_y_f);
     }
-    else{
-        cx = 20*boxangel.cosx,cy = -20*boxangel.cosy;
+    else
+    {
+        cx = (int)(20.0f * boxangel.cosx);
+        cy = (int)(-20.0f * boxangel.cosy);
     }
 
     lcd_fill(170,390,230,450,BLACK);
@@ -204,7 +268,7 @@ void TIM7_IRQHandler(void)
     else if(v<0.5&&v>0.2){
         lcd_fill(7,7,23,348*v,BLUE);
     }
-    else if(v<0.2){20
+    else if(v<0.2){
         lcd_fill(7,7,23,348*v,RED);
     }
     

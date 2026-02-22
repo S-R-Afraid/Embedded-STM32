@@ -78,7 +78,7 @@ uint16_t PS2_xy_value[2];               /* 0x 1y */
 uint8_t PS2_z = 0;                      /* z轴是否被按下 */
 float PS2_x_f = 0,PS2_y_f = 0;          /* xy的相对值，取值0~1 */
 
-int model=0;
+int model=1;
     
 int sandclock_Random(int n)
 {
